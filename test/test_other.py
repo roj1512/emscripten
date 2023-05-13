@@ -5198,15 +5198,17 @@ int main() {
     'full_only': [{'EMCC_FORCE_STDLIBS': 'libc,libc++abi,libc++,libmalloc', 'EMCC_ONLY_FORCED_STDLIBS': '1'}, False],
   })
   def test_only_force_stdlibs(self, env, fail):
+    cmd = [EMXX, test_file('hello_libcxx.cpp'), '-sWARN_ON_UNDEFINED_SYMBOLS=0']
     with env_modify(env):
-      err = self.run_process([EMXX, test_file('hello_libcxx.cpp'), '-sWARN_ON_UNDEFINED_SYMBOLS=0'], stderr=PIPE).stderr
-      if 'EMCC_ONLY_FORCED_STDLIBS' in env:
-        self.assertContained('EMCC_ONLY_FORCED_STDLIBS is deprecated', err)
       if fail:
-        output = self.run_js('a.out.js', assert_returncode=NON_ZERO)
-        self.assertContained('missing function', output)
+        err = self.expect_fail(cmd)
+        self.assertContained('undefined symbol: malloc', err)
       else:
-        self.assertContained('hello, world!', self.run_js('a.out.js'))
+        err = self.run_process(cmd, stderr=PIPE).stderr
+        if 'EMCC_ONLY_FORCED_STDLIBS' in env:
+          self.assertContained('EMCC_ONLY_FORCED_STDLIBS is deprecated', err)
+        else:
+          self.assertContained('hello, world!', self.run_js('a.out.js'))
 
   def test_only_force_stdlibs_2(self):
     create_file('src.cpp', r'''
